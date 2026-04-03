@@ -1,0 +1,71 @@
+{
+  "$schema": "https://www.schemastore.org/package.json",
+  "name": "sqlite-erd",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "author": "Jure Rotar <hello@jurerotar.com>",
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jurerotar/sqlite-erd",
+    "directory": "packages/sqlite-erd"
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
+    },
+    "./sqlite-erd.css": "./dist/style.css"
+  },
+  "scripts": {
+    "dev": "tsdown --watch",
+    "build": "tsdown",
+    "lint:check": "biome lint --no-errors-on-unmatched",
+    "lint": "biome lint --fix --no-errors-on-unmatched",
+    "format:check": "biome ci --linter-enabled=false",
+    "format": "biome check --write --no-errors-on-unmatched",
+    "test": "vitest",
+    "type-check": "tsgo"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "1.1.15",
+    "@radix-ui/react-separator": "1.1.8",
+    "@radix-ui/react-slot": "1.2.4",
+    "@sqlite.org/sqlite-wasm": "3.51.2-build8",
+    "@tsdown/css": "0.21.7",
+    "@xyflow/react": "12.10.2",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "dagre": "0.8.5",
+    "react-icons": "5.6.0",
+    "tailwind-merge": "3.5.0",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.10",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@tailwindcss/vite": "4.2.2",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@types/dagre": "0.7.54",
+    "@types/node": "25.5.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@types/sql.js": "1.4.11",
+    "@typescript/native-preview": "7.0.0-dev.20260401.1",
+    "@vitejs/plugin-react": "6.0.1",
+    "postcss-import": "16.1.1",
+    "tailwindcss": "4.2.2",
+    "tsdown": "0.21.7",
+    "typescript": "6.0.2",
+    "vitest": "4.1.2"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  }
+}

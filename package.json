@@ -1,0 +1,20 @@
+{
+  "$schema": "https://www.schemastore.org/package.json",
+  "name": "sqlite-erd-monorepo",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "Jure Rotar <hello@jurerotar.com>",
+  "repository": "github:jurerotar/sqlite-erd",
+  "bugs": "https://github.com/jurerotar/sqlite-erd/issues",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "turbo": "2.9.3",
+    "lefthook": "2.1.4",
+    "@biomejs/biome": "2.4.10"
+  },
+  "packageManager": "npm@11.11.0"
+}

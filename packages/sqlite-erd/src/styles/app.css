@@ -1,0 +1,341 @@
+@import "tailwindcss";
+@source "../**/*.{ts,tsx}";
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-pk: hsl(var(--pk));
+  --color-fk: hsl(var(--fk));
+  --color-inferred: hsl(var(--inferred));
+  --color-unique: hsl(var(--unique));
+  --color-index: hsl(var(--index));
+  --color-node-bg: hsl(var(--node-bg));
+  --color-node-header: hsl(var(--node-header));
+  --color-node-border: hsl(var(--node-border));
+
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 12%;
+    --primary: 0 0% 30%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 12%;
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 46%;
+    --accent: 0 0% 93%;
+    --accent-foreground: 0 0% 12%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 0 0% 30%;
+    --radius: 0.5rem;
+
+    --pk: 0 0% 35%;
+    --fk: 0 0% 45%;
+    --inferred: 0 0% 50%;
+    --unique: 0 0% 40%;
+    --index: 210 50% 50%;
+    --node-bg: 0 0% 100%;
+    --node-header: 0 0% 96%;
+    --node-border: 0 0% 82%;
+    --edge-explicit: 0 0% 55%;
+    --edge-inferred: 0 0% 70%;
+    --highlight-glow: 0 0% 40%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 20%;
+    --sidebar-primary: 0 0% 12%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 12%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 0 0% 40%;
+  }
+
+  .dark {
+    --background: 240 18% 7%;
+    --foreground: 0 0% 85%;
+    --card: 240 12% 5%;
+    --card-foreground: 0 0% 85%;
+    --popover: 240 12% 8%;
+    --popover-foreground: 0 0% 85%;
+    --primary: 0 0% 65%;
+    --primary-foreground: 0 0% 8%;
+    --secondary: 240 10% 12%;
+    --secondary-foreground: 0 0% 85%;
+    --muted: 240 10% 12%;
+    --muted-foreground: 0 0% 50%;
+    --accent: 240 10% 14%;
+    --accent-foreground: 0 0% 85%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 85%;
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 0 0% 50%;
+
+    --pk: 0 0% 70%;
+    --fk: 0 0% 55%;
+    --inferred: 0 0% 45%;
+    --unique: 0 0% 60%;
+    --index: 210 40% 60%;
+    --node-bg: 240 12% 5%;
+    --node-header: 240 10% 9%;
+    --node-border: 240 10% 18%;
+    --edge-explicit: 0 0% 50%;
+    --edge-inferred: 0 0% 38%;
+    --highlight-glow: 0 0% 60%;
+    --sidebar-background: 240 15% 6%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 0 0% 70%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 10% 12%;
+    --sidebar-accent-foreground: 0 0% 85%;
+    --sidebar-border: 240 10% 16%;
+    --sidebar-ring: 0 0% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+}
+
+.font-mono {
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* React Flow customization */
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__minimap {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+}
+
+.react-flow__controls {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.react-flow__controls-button {
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  fill: hsl(var(--foreground));
+}
+
+.react-flow__controls-button:hover {
+  background: hsl(var(--muted));
+}
+
+/* Table node styles */
+.table-node {
+  background: hsl(var(--node-bg));
+  border: 1.5px solid hsl(var(--node-border));
+  border-radius: 0.5rem;
+  overflow: hidden;
+  min-width: 220px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s,
+    opacity 0.3s;
+}
+
+.table-node.highlighted {
+  border-color: hsl(var(--highlight-glow));
+  box-shadow: 0 0 16px hsl(var(--highlight-glow) / 0.3);
+}
+
+.table-node.dimmed {
+  opacity: 0.3;
+}
+
+.table-node.temporary {
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.table-node-header {
+  background: hsl(var(--node-header));
+  padding: 8px 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid hsl(var(--node-border));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-node-body {
+  padding: 4px 0;
+}
+
+.column-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  transition: background 0.15s;
+  border-bottom: 1px solid hsl(var(--node-border));
+}
+
+.column-row:last-child {
+  border-bottom: none;
+}
+
+.column-row:hover {
+  background: hsl(var(--muted) / 0.5);
+}
+.column-name {
+  flex: 1;
+  color: hsl(var(--foreground));
+}
+
+.column-type {
+  color: hsl(var(--muted-foreground));
+  font-size: 10px;
+}
+
+.table-node-indexes {
+  border-top: 1px solid hsl(var(--node-border) / 0.5);
+  padding: 6px 12px;
+  background: hsl(var(--muted) / 0.2);
+}
+
+.index-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  color: hsl(var(--muted-foreground));
+}
+
+.index-badge {
+  color: hsl(var(--index));
+  font-weight: 700;
+  font-size: 8px;
+}
+
+.badge-pk {
+  background: hsl(var(--pk) / 0.15);
+  color: hsl(var(--pk));
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.badge-fk {
+  background: hsl(var(--fk) / 0.15);
+  color: hsl(var(--fk));
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.badge-ix {
+  background: hsl(var(--index) / 0.15);
+  color: hsl(var(--index));
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.badge-nn {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.badge-uq {
+  background: hsl(var(--unique) / 0.15);
+  color: hsl(var(--unique));
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
