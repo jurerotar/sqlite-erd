@@ -23,18 +23,18 @@
   },
   "dependencies": {
     "sqlite-erd": "*",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.10",
-    "@tailwindcss/vite": "4.2.2",
+    "@biomejs/biome": "2.4.14",
+    "@tailwindcss/vite": "4.2.4",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "@typescript/native-preview": "7.0.0-dev.20260401.1",
+    "@typescript/native-preview": "7.0.0-dev.20260504.1",
     "@vitejs/plugin-react": "6.0.1",
-    "tailwindcss": "4.2.2",
-    "typescript": "6.0.2",
-    "vite": "8.0.3"
+    "tailwindcss": "4.2.4",
+    "typescript": "6.0.3",
+    "vite": "8.0.10"
   }
 }
