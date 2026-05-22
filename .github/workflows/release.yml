@@ -10,7 +10,9 @@ jobs:
       contents: write
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Setup environment (node + install)
         uses: ./.github/actions/node-setup
@@ -23,7 +25,7 @@ jobs:
         run: echo "VERSION=$(node -p "require('./packages/sqlite-erd/package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ steps.version.outputs.VERSION }}
           name: ${{ steps.version.outputs.VERSION }}
