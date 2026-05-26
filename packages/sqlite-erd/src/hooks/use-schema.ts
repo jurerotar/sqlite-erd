@@ -3,6 +3,10 @@ import { parseDBFile, readTableDataPage } from '@/lib/db-parser';
 import { detectInferredRelationships } from '@/lib/relationship-detector';
 import type { Relationship, Schema, Table } from '@/lib/schema-types';
 import { parseSQLStatements } from '@/lib/sql-parser';
+import {
+  parseSQLiteFileInternals,
+  type SQLiteFileInternals,
+} from '@/lib/sqlite-file-format';
 
 type InitialSchemaSource = {
   databaseUrl?: string;
@@ -16,6 +20,8 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
   const [databaseBuffer, setDatabaseBuffer] = useState<ArrayBuffer | null>(
     null,
   );
+  const [databaseInternals, setDatabaseInternals] =
+    useState<SQLiteFileInternals | null>(null);
 
   const setParsedSchema = useCallback(
     (
@@ -39,6 +45,11 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
 
       setSchema({ tables, relationships: [...relationships, ...inferred] });
       setDatabaseBuffer(uploadedDatabaseBuffer);
+      setDatabaseInternals(
+        uploadedDatabaseBuffer
+          ? parseSQLiteFileInternals(uploadedDatabaseBuffer)
+          : null,
+      );
       return true;
     },
     [],
@@ -50,6 +61,7 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
         setLoading(true);
         setError(null);
         setDatabaseBuffer(null);
+        setDatabaseInternals(null);
         const { tables, relationships } = parseSQLStatements(sql);
         if (tables.length === 0) {
           setError('No CREATE TABLE statements found.');
@@ -75,6 +87,7 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
           setLoading(true);
           setError(null);
           setDatabaseBuffer(null);
+          setDatabaseInternals(null);
 
           const response = await fetch(databaseUrl, {
             signal: abortController.signal,
@@ -117,6 +130,7 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
         setLoading(true);
         setError(null);
         setDatabaseBuffer(null);
+        setDatabaseInternals(null);
 
         const ext = file.name.split('.').pop()?.toLowerCase();
         let tables: Table[];
@@ -159,6 +173,7 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
     setSchema(null);
     setError(null);
     setDatabaseBuffer(null);
+    setDatabaseInternals(null);
   }, []);
 
   const loadTableData = useCallback(
@@ -177,6 +192,8 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
     loading,
     error,
     hasDatabaseData: !!databaseBuffer,
+    databaseBuffer,
+    databaseInternals,
     loadTableData,
     loadFromSQL,
     loadFromFile,
