@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/package.json",
   "name": "sqlite-erd",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "type": "module",
   "license": "MIT",
   "author": "Jure Rotar <hello@jurerotar.com>",
