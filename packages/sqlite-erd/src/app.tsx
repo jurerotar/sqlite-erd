@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   LuDatabase as Database,
   LuMoon as Moon,
@@ -7,6 +7,7 @@ import {
   LuRotateCcw as RotateCcw,
   LuSun as Sun,
 } from 'react-icons/lu';
+import { DataDrawer } from '@/components/data-drawer.tsx';
 import { ERDCanvas } from '@/components/erd-canvas.tsx';
 import { FileUploader } from '@/components/file-uploader.tsx';
 import { SchemaInput } from '@/components/schema-input.tsx';
@@ -16,16 +17,46 @@ import { useTheme } from '@/hooks/use-theme.ts';
 import './styles/app.css';
 
 type AppProps = {
+  databaseUrl?: string;
   sqlSchema?: string;
   showSidebar?: boolean;
 };
 
-export const App = ({ sqlSchema, showSidebar = true }: AppProps) => {
+export const App = ({
+  databaseUrl,
+  sqlSchema,
+  showSidebar = true,
+}: AppProps) => {
   const { theme, toggle: toggleTheme } = useTheme();
-  const { schema, loading, error, loadFromSQL, loadFromFile, clear } =
-    useSchema(sqlSchema);
+  const {
+    schema,
+    loading,
+    error,
+    hasDatabaseData,
+    loadTableData,
+    loadFromSQL,
+    loadFromFile,
+    clear,
+  } = useSchema({ databaseUrl, sqlSchema });
 
   const [panelOpen, setPanelOpen] = useState<boolean>(showSidebar);
+  const [dataTableName, setDataTableName] = useState<string | null>(null);
+
+  const selectedDataTable = useMemo(
+    () => schema?.tables.find((table) => table.name === dataTableName) ?? null,
+    [schema, dataTableName],
+  );
+
+  useEffect(() => {
+    if (!hasDatabaseData) {
+      setDataTableName(null);
+    }
+  }, [hasDatabaseData]);
+
+  const handleClear = () => {
+    setDataTableName(null);
+    clear();
+  };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
@@ -80,7 +111,7 @@ export const App = ({ sqlSchema, showSidebar = true }: AppProps) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={clear}
+                    onClick={handleClear}
                     className="h-7 px-2 text-xs"
                   >
                     <RotateCcw
@@ -120,7 +151,23 @@ export const App = ({ sqlSchema, showSidebar = true }: AppProps) => {
         )}
 
         {schema ? (
-          <ERDCanvas schema={schema} />
+          <>
+            <ERDCanvas
+              schema={schema}
+              onTableClick={
+                hasDatabaseData
+                  ? (tableName) => setDataTableName(tableName)
+                  : undefined
+              }
+            />
+            {hasDatabaseData && (
+              <DataDrawer
+                table={selectedDataTable}
+                loadTableData={loadTableData}
+                onClose={() => setDataTableName(null)}
+              />
+            )}
+          </>
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-3">
