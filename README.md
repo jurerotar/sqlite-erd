@@ -2,7 +2,9 @@
 
 A React-based Entity Relationship Diagram (ERD) generator for SQLite databases. Transform your SQL schemas or database files into interactive, visual diagrams.
 
-![SQLite ERD Screenshot](.github/assets/sqlite-erd-screenshot.png)
+<video src=".github/assets/sqlite-erd.mp4" controls muted loop>
+  <a href=".github/assets/sqlite-erd.mp4">View SQLite ERD demo video</a>
+</video>
 
 ## Use Case
 
