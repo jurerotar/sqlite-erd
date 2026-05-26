@@ -41,6 +41,7 @@ export const App = ({
 
   const [panelOpen, setPanelOpen] = useState<boolean>(showSidebar);
   const [dataTableName, setDataTableName] = useState<string | null>(null);
+  const [dataDrawerCollapsed, setDataDrawerCollapsed] = useState(false);
 
   const selectedDataTable = useMemo(
     () => schema?.tables.find((table) => table.name === dataTableName) ?? null,
@@ -50,12 +51,25 @@ export const App = ({
   useEffect(() => {
     if (!hasDatabaseData) {
       setDataTableName(null);
+      setDataDrawerCollapsed(false);
     }
   }, [hasDatabaseData]);
 
   const handleClear = () => {
     setDataTableName(null);
+    setDataDrawerCollapsed(false);
     clear();
+  };
+
+  const handleDataDrawerClose = () => {
+    setDataTableName(null);
+    setDataDrawerCollapsed(false);
+  };
+
+  const handleTableClick = (tableName: string) => {
+    if (!dataDrawerCollapsed) {
+      setDataTableName(tableName);
+    }
   };
 
   return (
@@ -154,17 +168,16 @@ export const App = ({
           <>
             <ERDCanvas
               schema={schema}
-              onTableClick={
-                hasDatabaseData
-                  ? (tableName) => setDataTableName(tableName)
-                  : undefined
-              }
+              onTableClick={hasDatabaseData ? handleTableClick : undefined}
             />
             {hasDatabaseData && (
               <DataDrawer
+                collapsed={dataDrawerCollapsed}
                 table={selectedDataTable}
                 loadTableData={loadTableData}
-                onClose={() => setDataTableName(null)}
+                onCollapse={() => setDataDrawerCollapsed(true)}
+                onClose={handleDataDrawerClose}
+                onExpand={() => setDataDrawerCollapsed(false)}
               />
             )}
           </>

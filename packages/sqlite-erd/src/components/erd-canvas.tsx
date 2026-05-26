@@ -4,7 +4,6 @@ import {
   Controls,
   type Edge,
   MarkerType,
-  MiniMap,
   type Node,
   ReactFlow,
   useEdgesState,
@@ -171,12 +170,6 @@ export const ERDCanvas = ({ schema, onTableClick }: ERDCanvasProps) => {
           className="bg-background!"
         />
         <Controls showInteractive />
-        <MiniMap
-          nodeStrokeWidth={3}
-          pannable
-          zoomable
-          className="bg-card!"
-        />
       </ReactFlow>
       <Legend />
     </div>

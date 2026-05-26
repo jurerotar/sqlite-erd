@@ -3,6 +3,8 @@ import {
   LuChevronLeft as ChevronLeft,
   LuChevronRight as ChevronRight,
   LuDatabase as Database,
+  LuPanelRightClose as PanelRightClose,
+  LuPanelRightOpen as PanelRightOpen,
   LuX as X,
 } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
@@ -10,8 +12,11 @@ import { type TableDataPage, tableDataRowKey } from '@/lib/db-parser';
 import type { Table } from '@/lib/schema-types';
 
 interface DataDrawerProps {
+  collapsed: boolean;
   table: Table | null;
+  onCollapse: () => void;
   onClose: () => void;
+  onExpand: () => void;
   loadTableData: (
     tableName: string,
     page: number,
@@ -38,8 +43,11 @@ const formatCellValue = (value: unknown) => {
 };
 
 export const DataDrawer = ({
+  collapsed,
   table,
+  onCollapse,
   onClose,
+  onExpand,
   loadTableData,
 }: DataDrawerProps) => {
   const [page, setPage] = useState(1);
@@ -104,6 +112,22 @@ export const DataDrawer = ({
     return null;
   }
 
+  if (collapsed) {
+    return (
+      <aside className="absolute inset-y-0 right-0 z-20 flex w-12 flex-col items-center border-l border-border bg-card shadow-xl">
+        <button
+          type="button"
+          onClick={onExpand}
+          className="mt-3 rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          aria-label="Expand data drawer"
+          title="Expand data drawer"
+        >
+          <PanelRightOpen size={16} />
+        </button>
+      </aside>
+    );
+  }
+
   const firstRow = data?.totalRows ? (page - 1) * PAGE_SIZE + 1 : 0;
   const lastRow = data ? Math.min(page * PAGE_SIZE, data.totalRows) : 0;
 
@@ -124,9 +148,19 @@ export const DataDrawer = ({
         </div>
         <button
           type="button"
+          onClick={onCollapse}
+          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          aria-label="Collapse data drawer"
+          title="Collapse data drawer"
+        >
+          <PanelRightClose size={16} />
+        </button>
+        <button
+          type="button"
           onClick={onClose}
           className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           aria-label="Close data drawer"
+          title="Close data drawer"
         >
           <X size={16} />
         </button>
