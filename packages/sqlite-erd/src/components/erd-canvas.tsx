@@ -4,7 +4,6 @@ import {
   Controls,
   type Edge,
   MarkerType,
-  MiniMap,
   type Node,
   ReactFlow,
   useEdgesState,
@@ -24,6 +23,7 @@ const edgeTypes = { labeled: LabeledEdge };
 
 interface ERDCanvasProps {
   schema: Schema;
+  onTableClick?: (tableName: string) => void;
 }
 
 const schemaToFlow = (schema: Schema) => {
@@ -78,7 +78,7 @@ const schemaToFlow = (schema: Schema) => {
   return { nodes: laid, edges };
 };
 
-export const ERDCanvas = ({ schema }: ERDCanvasProps) => {
+export const ERDCanvas = ({ schema, onTableClick }: ERDCanvasProps) => {
   const initial = useMemo(() => schemaToFlow(schema), [schema]);
   const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
@@ -137,8 +137,9 @@ export const ERDCanvas = ({ schema }: ERDCanvasProps) => {
   const onNodeClick = useCallback(
     (_: MouseEvent, node: Node) => {
       toggleSelect(node.id);
+      onTableClick?.(node.id);
     },
-    [toggleSelect],
+    [toggleSelect, onTableClick],
   );
 
   const onPaneClick = useCallback(() => {
@@ -169,12 +170,6 @@ export const ERDCanvas = ({ schema }: ERDCanvasProps) => {
           className="bg-background!"
         />
         <Controls showInteractive />
-        <MiniMap
-          nodeStrokeWidth={3}
-          pannable
-          zoomable
-          className="bg-card!"
-        />
       </ReactFlow>
       <Legend />
     </div>
