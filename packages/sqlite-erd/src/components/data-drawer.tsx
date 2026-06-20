@@ -1,14 +1,3 @@
-import {
-  type ColumnDef,
-  type ColumnFiltersState,
-  columnFilteringFeature,
-  createFilteredRowModel,
-  type FilterFn,
-  filterFns,
-  type TableFeatures,
-  tableFeatures,
-  useTable,
-} from '@tanstack/react-table';
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   LuChevronLeft as ChevronLeft,
@@ -40,8 +29,6 @@ interface DataDrawerProps {
   ) => Promise<TableDataPage>;
 }
 
-type DataRow = Record<string, unknown>;
-
 const PAGE_SIZE = 100;
 
 const formatCellValue = (value: unknown) => {
@@ -60,34 +47,6 @@ const formatCellValue = (value: unknown) => {
   return String(value);
 };
 
-const dataInspectorValueFilter: FilterFn<TableFeatures, DataRow> = (
-  row,
-  columnId,
-  filterValue,
-) => {
-  const search = String(filterValue ?? '')
-    .trim()
-    .toLowerCase();
-
-  if (!search) {
-    return true;
-  }
-
-  return formatCellValue(row.getValue(columnId)).toLowerCase().includes(search);
-};
-
-dataInspectorValueFilter.autoRemove = (value) =>
-  String(value ?? '').trim().length === 0;
-
-const dataInspectorFeatures = tableFeatures({
-  columnFilteringFeature,
-  filteredRowModel: createFilteredRowModel(),
-  filterFns: {
-    ...filterFns,
-    dataInspectorValue: dataInspectorValueFilter,
-  },
-});
-
 const clampPage = (page: number, totalPages: number) =>
   Math.min(Math.max(page, 1), totalPages);
 
@@ -102,45 +61,24 @@ export const DataDrawer = ({
   const drawerRef = useRef<HTMLElement>(null);
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState('1');
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>(
+    {},
+  );
   const [data, setData] = useState<TableDataPage | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tableName = selectedTable?.name;
 
-  const columns = useMemo<
-    Array<ColumnDef<typeof dataInspectorFeatures, DataRow>>
-  >(
-    () =>
-      selectedTable?.columns.map((column) => ({
-        id: column.name,
-        accessorFn: (row) => row[column.name],
-        header: column.name,
-        filterFn: 'dataInspectorValue',
-        cell: (info) => formatCellValue(info.getValue()),
-      })) ?? [],
-    [selectedTable],
-  );
   const activeFilters = useMemo(
     () =>
-      columnFilters
-        .map((filter) => ({
-          column: filter.id,
-          value: String(filter.value ?? '').trim(),
+      Object.entries(columnFilters)
+        .map(([column, value]) => ({
+          column,
+          value: value.trim(),
         }))
         .filter((filter) => filter.value.length > 0),
     [columnFilters],
   );
-  const dataTable = useTable({
-    features: dataInspectorFeatures,
-    columns,
-    data: data?.rows ?? [],
-    manualFiltering: true,
-    state: {
-      columnFilters,
-    },
-    onColumnFiltersChange: setColumnFilters,
-  });
 
   useEffect(() => {
     if (!tableName) {
@@ -148,7 +86,7 @@ export const DataDrawer = ({
     }
 
     setPage(1);
-    setColumnFilters([]);
+    setColumnFilters({});
   }, [tableName]);
 
   useEffect(() => {
@@ -234,7 +172,7 @@ export const DataDrawer = ({
   const firstRow = data?.totalRows ? (page - 1) * PAGE_SIZE + 1 : 0;
   const lastRow = data ? Math.min(page * PAGE_SIZE, data.totalRows) : 0;
   const hasFilters = activeFilters.length > 0;
-  const rows = dataTable.getRowModel().rows;
+  const rows = data?.rows ?? [];
 
   const goToPage = (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
@@ -333,56 +271,57 @@ export const DataDrawer = ({
           <div className="min-h-0 flex-1 overflow-auto">
             <table className="w-full border-collapse text-left text-xs">
               <thead className="sticky top-0 z-10 bg-card">
-                {dataTable.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className="border-b border-border px-3 py-2 align-top font-mono font-semibold text-muted-foreground"
-                      >
-                        {header.isPlaceholder ? null : (
-                          <div className="flex min-w-36 flex-col gap-2">
-                            <span className="truncate">
-                              <dataTable.FlexRender header={header} />
-                            </span>
-                            <input
-                              type="search"
-                              value={String(
-                                header.column.getFilterValue() ?? '',
-                              )}
-                              onChange={(event) => {
-                                setPage(1);
-                                header.column.setFilterValue(
-                                  event.target.value,
-                                );
-                              }}
-                              placeholder={`Filter ${header.column.id}`}
-                              className="w-full rounded-md border border-input bg-background px-2 py-1 font-normal font-sans text-foreground text-xs outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
-                              aria-label={`Filter ${header.column.id}`}
-                            />
-                          </div>
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
+                <tr>
+                  {selectedTable.columns.map((column) => (
+                    <th
+                      key={column.name}
+                      className="border-b border-border px-3 py-2 align-top font-mono font-semibold text-muted-foreground"
+                    >
+                      <div className="flex min-w-36 flex-col gap-2">
+                        <span className="truncate">{column.name}</span>
+                        <input
+                          type="search"
+                          value={columnFilters[column.name] ?? ''}
+                          onChange={(event) => {
+                            const { value } = event.target;
+                            setPage(1);
+                            setColumnFilters((current) => {
+                              if (!value) {
+                                const { [column.name]: _, ...next } = current;
+                                return next;
+                              }
+
+                              return {
+                                ...current,
+                                [column.name]: value,
+                              };
+                            });
+                          }}
+                          placeholder={`Filter ${column.name}`}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 font-normal font-sans text-foreground text-xs outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+                          aria-label={`Filter ${column.name}`}
+                        />
+                      </div>
+                    </th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr
-                    key={String(row.original[tableDataRowKey])}
+                    key={String(row[tableDataRowKey])}
                     className="border-b border-border/60 hover:bg-muted/40"
                   >
-                    {row.getAllCells().map((cell) => {
-                      const cellValue = formatCellValue(cell.getValue());
+                    {selectedTable.columns.map((column) => {
+                      const cellValue = formatCellValue(row[column.name]);
 
                       return (
                         <td
-                          key={cell.id}
+                          key={column.name}
                           className="max-w-56 truncate px-3 py-2 font-mono text-foreground"
                           title={cellValue}
                         >
-                          <dataTable.FlexRender cell={cell} />
+                          {cellValue}
                         </td>
                       );
                     })}

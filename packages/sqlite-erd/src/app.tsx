@@ -25,6 +25,8 @@ type AppProps = {
   showSidebar?: boolean;
 };
 
+type SourceView = 'erd' | 'internals';
+
 export const App = ({
   databaseUrl,
   sqlSchema,
@@ -32,6 +34,9 @@ export const App = ({
 }: AppProps) => {
   const { theme, toggle: toggleTheme } = useTheme();
   const {
+    sources,
+    activeSourceId,
+    activeSource,
     schema,
     loading,
     error,
@@ -41,13 +46,20 @@ export const App = ({
     loadTableData,
     loadFromSQL,
     loadFromFile,
+    selectSource,
     clear,
   } = useSchema({ databaseUrl, sqlSchema });
 
   const [panelOpen, setPanelOpen] = useState<boolean>(showSidebar);
   const [dataTableName, setDataTableName] = useState<string | null>(null);
   const [dataDrawerCollapsed, setDataDrawerCollapsed] = useState(false);
-  const [activeView, setActiveView] = useState<'erd' | 'internals'>('erd');
+  const [sourceViews, setSourceViews] = useState<Record<string, SourceView>>(
+    {},
+  );
+
+  const activeView = activeSource
+    ? (sourceViews[activeSource.id] ?? 'erd')
+    : 'erd';
 
   const selectedDataTable = useMemo(
     () => schema?.tables.find((table) => table.name === dataTableName) ?? null,
@@ -55,17 +67,32 @@ export const App = ({
   );
 
   useEffect(() => {
-    if (!hasDatabaseData) {
-      setDataTableName(null);
-      setDataDrawerCollapsed(false);
-      setActiveView('erd');
+    if (!activeSourceId) {
+      return;
     }
-  }, [hasDatabaseData]);
+
+    setDataTableName(null);
+    setDataDrawerCollapsed(false);
+  }, [activeSourceId]);
+
+  useEffect(() => {
+    const sourceIds = new Set(sources.map((source) => source.id));
+
+    setSourceViews((current) => {
+      const retainedViews = Object.fromEntries(
+        Object.entries(current).filter(([sourceId]) => sourceIds.has(sourceId)),
+      ) as Record<string, SourceView>;
+
+      return Object.keys(retainedViews).length === Object.keys(current).length
+        ? current
+        : retainedViews;
+    });
+  }, [sources]);
 
   const handleClear = () => {
     setDataTableName(null);
     setDataDrawerCollapsed(false);
-    setActiveView('erd');
+    setSourceViews({});
     clear();
   };
 
@@ -77,6 +104,22 @@ export const App = ({
   const handleTableClick = (tableName: string) => {
     if (!dataDrawerCollapsed) {
       setDataTableName(tableName);
+    }
+  };
+
+  const handleSourceSelect = (sourceId: string) => {
+    selectSource(sourceId);
+  };
+
+  const handleSourceViewChange = (sourceId: string, view: SourceView) => {
+    setSourceViews((current) => ({
+      ...current,
+      [sourceId]: view,
+    }));
+    selectSource(sourceId);
+
+    if (view === 'internals') {
+      handleDataDrawerClose();
     }
   };
 
@@ -111,6 +154,98 @@ export const App = ({
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {sources.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Databases
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClear}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <RotateCcw
+                          size={12}
+                          className="mr-1"
+                        />
+                        Clear
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {sources.map((source) => {
+                        const sourceView = sourceViews[source.id] ?? 'erd';
+                        const isActive = source.id === activeSourceId;
+
+                        return (
+                          <div
+                            key={source.id}
+                            className={`rounded-xl border p-3 transition-colors ${
+                              isActive
+                                ? 'border-primary/50 bg-primary/5'
+                                : 'border-border bg-background/60 hover:border-primary/30'
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleSourceSelect(source.id)}
+                              className="w-full text-left"
+                            >
+                              <span className="block truncate text-sm font-medium text-foreground">
+                                {source.name}
+                              </span>
+                              <span className="mt-1 block text-xs text-muted-foreground">
+                                {source.schema.tables.length} tables ·{' '}
+                                {source.schema.relationships.length}{' '}
+                                relationships
+                              </span>
+                            </button>
+
+                            <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/30 p-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleSourceViewChange(source.id, 'erd')
+                                }
+                                className={`flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors ${
+                                  sourceView === 'erd'
+                                    ? 'bg-card text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                <GitFork size={13} />
+                                ERD
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleSourceViewChange(source.id, 'internals')
+                                }
+                                disabled={!source.databaseBuffer}
+                                className={`flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                                  sourceView === 'internals'
+                                    ? 'bg-card text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                                title={
+                                  source.databaseBuffer
+                                    ? 'Show SQLite internals'
+                                    : 'Internals are available for SQLite database files'
+                                }
+                              >
+                                <ScanSearch size={13} />
+                                Internals
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <FileUploader
                   onFile={loadFromFile}
                   loading={loading}
@@ -130,60 +265,6 @@ export const App = ({
                 {error && (
                   <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-lg p-3 text-xs">
                     {error}
-                  </div>
-                )}
-
-                {schema && (
-                  <div className="space-y-2">
-                    {hasDatabaseData && (
-                      <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/30 p-1">
-                        <button
-                          type="button"
-                          onClick={() => setActiveView('erd')}
-                          className={`flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors ${
-                            activeView === 'erd'
-                              ? 'bg-card text-foreground shadow-sm'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          <GitFork size={13} />
-                          ERD
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDataTableName(null);
-                            setActiveView('internals');
-                          }}
-                          className={`flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors ${
-                            activeView === 'internals'
-                              ? 'bg-card text-foreground shadow-sm'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          <ScanSearch size={13} />
-                          Internals
-                        </button>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {schema.tables.length} tables ·{' '}
-                        {schema.relationships.length} relationships
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClear}
-                        className="h-7 px-2 text-xs"
-                      >
-                        <RotateCcw
-                          size={12}
-                          className="mr-1"
-                        />
-                        Clear
-                      </Button>
-                    </div>
                   </div>
                 )}
               </div>
@@ -226,6 +307,7 @@ export const App = ({
               />
             ) : (
               <ERDCanvas
+                key={activeSourceId ?? 'schema'}
                 schema={schema}
                 onTableClick={hasDatabaseData ? handleTableClick : undefined}
               />

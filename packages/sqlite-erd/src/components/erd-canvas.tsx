@@ -27,7 +27,20 @@ interface ERDCanvasProps {
 }
 
 const schemaToFlow = (schema: Schema) => {
-  const nodes: Node[] = schema.tables.map((table) => ({
+  const tablesByName = new Map(
+    schema.tables.map((table) => [table.name, table]),
+  );
+  const relationshipsById = new Map<string, (typeof schema.relationships)[0]>();
+
+  schema.relationships.forEach((rel, index) => {
+    const relationshipId = relationshipsById.has(rel.id)
+      ? `${rel.id}-${index}`
+      : rel.id;
+
+    relationshipsById.set(relationshipId, { ...rel, id: relationshipId });
+  });
+
+  const nodes: Node[] = Array.from(tablesByName.values()).map((table) => ({
     id: table.name,
     type: 'table',
     position: { x: 0, y: 0 },
@@ -41,7 +54,7 @@ const schemaToFlow = (schema: Schema) => {
     },
   }));
 
-  const edges: Edge[] = schema.relationships.map((rel) => {
+  const edges: Edge[] = Array.from(relationshipsById.values()).map((rel) => {
     const isSelf = rel.sourceTable === rel.targetTable;
     return {
       id: rel.id,
