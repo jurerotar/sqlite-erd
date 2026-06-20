@@ -28,6 +28,21 @@ const createInputDb = (sqlite3: Sqlite3Static, buffer: ArrayBuffer) => {
 const quoteIdentifier = (identifier: string) =>
   `"${identifier.replaceAll('"', '""')}"`;
 
+const escapeLikePattern = (value: string) =>
+  value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
+
+const dataFilterExpression = (columnName: string) => {
+  const columnIdentifier = quoteIdentifier(columnName);
+
+  return [
+    'CASE',
+    `WHEN ${columnIdentifier} IS NULL THEN 'NULL'`,
+    `WHEN typeof(${columnIdentifier}) = 'blob' THEN 'BLOB (' || length(${columnIdentifier}) || ' bytes)'`,
+    `ELSE CAST(${columnIdentifier} AS TEXT)`,
+    'END',
+  ].join(' ');
+};
+
 export const tableDataRowKey = '\0sqliteErdRowKey';
 
 export const parseDBFile = async (
@@ -158,11 +173,17 @@ export interface TableDataPage {
   pageSize: number;
 }
 
+export interface TableDataFilter {
+  column: string;
+  value: string;
+}
+
 export const readTableDataPage = async (
   buffer: ArrayBuffer,
   tableName: string,
   page: number,
   pageSize = 100,
+  filters: readonly TableDataFilter[] = [],
 ): Promise<TableDataPage> => {
   const sqlite3 = await getSqlite3();
   const inputDb = createInputDb(sqlite3, buffer);
@@ -170,23 +191,39 @@ export const readTableDataPage = async (
   const safePage = Math.max(page, 1);
   const offset = (safePage - 1) * safePageSize;
   const tableIdentifier = quoteIdentifier(tableName);
+  const activeFilters = filters
+    .map((filter) => ({
+      column: filter.column,
+      value: filter.value.trim(),
+    }))
+    .filter((filter) => filter.value.length > 0);
+  const whereClause =
+    activeFilters.length > 0
+      ? ` WHERE ${activeFilters
+          .map(
+            (filter) =>
+              `lower(${dataFilterExpression(filter.column)}) LIKE lower(?) ESCAPE '\\'`,
+          )
+          .join(' AND ')}`
+      : '';
+  const filterBindings = activeFilters.map(
+    (filter) => `%${escapeLikePattern(filter.value)}%`,
+  );
 
   try {
-    const countRows = inputDb.exec(
-      `SELECT COUNT(*) AS count FROM ${tableIdentifier}`,
-      {
-        returnValue: 'resultRows',
-        rowMode: 'object',
-      },
-    );
+    const countRows = inputDb.exec({
+      sql: `SELECT COUNT(*) AS count FROM ${tableIdentifier}${whereClause}`,
+      bind: filterBindings,
+      returnValue: 'resultRows',
+      rowMode: 'object',
+    });
     const totalRows = Number(countRows[0]?.count ?? 0);
-    const resultRows = inputDb.exec(
-      `SELECT * FROM ${tableIdentifier} LIMIT ${safePageSize} OFFSET ${offset}`,
-      {
-        returnValue: 'resultRows',
-        rowMode: 'object',
-      },
-    ) as Record<string, unknown>[];
+    const resultRows = inputDb.exec({
+      sql: `SELECT * FROM ${tableIdentifier}${whereClause} LIMIT ? OFFSET ?`,
+      bind: [...filterBindings, safePageSize, offset],
+      returnValue: 'resultRows',
+      rowMode: 'object',
+    }) as Record<string, unknown>[];
     const rows = resultRows.map((row, index) => ({
       ...row,
       [tableDataRowKey]: offset + index,

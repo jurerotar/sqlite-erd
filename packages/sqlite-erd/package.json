@@ -39,6 +39,7 @@
     "@radix-ui/react-separator": "1.1.8",
     "@radix-ui/react-slot": "1.2.4",
     "@sqlite.org/sqlite-wasm": "3.53.0-build1",
+    "@tanstack/react-table": "^9.0.0-beta.16",
     "@tsdown/css": "0.22.0",
     "@xyflow/react": "12.10.2",
     "class-variance-authority": "0.7.1",

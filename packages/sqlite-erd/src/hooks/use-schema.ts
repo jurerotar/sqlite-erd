@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { parseDBFile, readTableDataPage } from '@/lib/db-parser';
+import {
+  parseDBFile,
+  readTableDataPage,
+  type TableDataFilter,
+} from '@/lib/db-parser';
 import { detectInferredRelationships } from '@/lib/relationship-detector';
 import type { Relationship, Schema, Table } from '@/lib/schema-types';
 import { parseSQLStatements } from '@/lib/sql-parser';
@@ -177,12 +181,23 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
   }, []);
 
   const loadTableData = useCallback(
-    (tableName: string, page: number, pageSize = 100) => {
+    (
+      tableName: string,
+      page: number,
+      pageSize = 100,
+      filters: readonly TableDataFilter[] = [],
+    ) => {
       if (!databaseBuffer) {
         return Promise.reject(new Error('No database file is loaded.'));
       }
 
-      return readTableDataPage(databaseBuffer, tableName, page, pageSize);
+      return readTableDataPage(
+        databaseBuffer,
+        tableName,
+        page,
+        pageSize,
+        filters,
+      );
     },
     [databaseBuffer],
   );
