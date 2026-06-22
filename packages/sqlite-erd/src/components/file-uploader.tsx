@@ -33,6 +33,8 @@ export const FileUploader = ({ onFile, loading }: FileUploaderProps) => {
       if (file) {
         onFile(file);
       }
+
+      e.target.value = '';
     },
     [onFile],
   );
@@ -46,7 +48,12 @@ export const FileUploader = ({ onFile, loading }: FileUploaderProps) => {
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
-      onClick={() => inputRef.current?.click()}
+      onClick={() => {
+        if (inputRef.current) {
+          inputRef.current.value = '';
+          inputRef.current.click();
+        }
+      }}
       className={`
         w-full border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all
         ${

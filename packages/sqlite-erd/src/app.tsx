@@ -1,21 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   LuDatabase as Database,
-  LuGitFork as GitFork,
   LuMoon as Moon,
-  LuPanelLeft as PanelLeft,
-  LuPanelLeftClose as PanelLeftClose,
-  LuRotateCcw as RotateCcw,
-  LuScanSearch as ScanSearch,
   LuSun as Sun,
 } from 'react-icons/lu';
+import { AppSidebar } from '@/components/app-sidebar.tsx';
 import { DataDrawer } from '@/components/data-drawer.tsx';
 import { ERDCanvas } from '@/components/erd-canvas.tsx';
-import { FileUploader } from '@/components/file-uploader.tsx';
-import { SchemaInput } from '@/components/schema-input.tsx';
 import { SQLiteInternalsExplorer } from '@/components/sqlite-internals-explorer.tsx';
-import { Button } from '@/components/ui/button.tsx';
 import { useSchema } from '@/hooks/use-schema.ts';
+import { type SourceView, useSourceViews } from '@/hooks/use-source-views.ts';
 import { useTheme } from '@/hooks/use-theme.ts';
 import './styles/app.css';
 
@@ -32,6 +26,8 @@ export const App = ({
 }: AppProps) => {
   const { theme, toggle: toggleTheme } = useTheme();
   const {
+    sources,
+    activeSourceId,
     schema,
     loading,
     error,
@@ -41,13 +37,16 @@ export const App = ({
     loadTableData,
     loadFromSQL,
     loadFromFile,
+    selectSource,
+    removeSource,
     clear,
   } = useSchema({ databaseUrl, sqlSchema });
 
   const [panelOpen, setPanelOpen] = useState<boolean>(showSidebar);
   const [dataTableName, setDataTableName] = useState<string | null>(null);
   const [dataDrawerCollapsed, setDataDrawerCollapsed] = useState(false);
-  const [activeView, setActiveView] = useState<'erd' | 'internals'>('erd');
+  const { activeView, sourceViews, resetSourceViews, setSourceView } =
+    useSourceViews(sources, activeSourceId);
 
   const selectedDataTable = useMemo(
     () => schema?.tables.find((table) => table.name === dataTableName) ?? null,
@@ -55,17 +54,18 @@ export const App = ({
   );
 
   useEffect(() => {
-    if (!hasDatabaseData) {
-      setDataTableName(null);
-      setDataDrawerCollapsed(false);
-      setActiveView('erd');
+    if (!activeSourceId) {
+      return;
     }
-  }, [hasDatabaseData]);
+
+    setDataTableName(null);
+    setDataDrawerCollapsed(false);
+  }, [activeSourceId]);
 
   const handleClear = () => {
     setDataTableName(null);
     setDataDrawerCollapsed(false);
-    setActiveView('erd');
+    resetSourceViews();
     clear();
   };
 
@@ -80,129 +80,44 @@ export const App = ({
     }
   };
 
+  const handleSourceViewChange = (sourceId: string, view: SourceView) => {
+    setSourceView(sourceId, view);
+    selectSource(sourceId);
+
+    if (view === 'internals') {
+      handleDataDrawerClose();
+    }
+  };
+
+  const handleSourceDelete = (sourceId: string) => {
+    if (sourceId === activeSourceId) {
+      handleDataDrawerClose();
+    }
+
+    removeSource(sourceId);
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
-      {/* Side Panel */}
       {showSidebar && (
-        <div
-          className={`shrink-0 border-r border-border bg-card flex flex-col h-full ${
-            panelOpen ? 'w-80' : 'w-12 items-center shadow-xl'
-          }`}
-        >
-          {panelOpen ? (
-            <>
-              <div className="p-4 border-b border-border flex items-center gap-2">
-                <Database
-                  size={18}
-                  className="text-primary"
-                />
-                <h1 className="font-semibold text-sm text-foreground">
-                  SQL → ERD
-                </h1>
-                <button
-                  type="button"
-                  onClick={() => setPanelOpen(false)}
-                  className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="Collapse upload panel"
-                  title="Collapse upload panel"
-                >
-                  <PanelLeftClose size={16} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <FileUploader
-                  onFile={loadFromFile}
-                  loading={loading}
-                />
-
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="flex-1 h-px bg-border" />
-                  <span>or</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                <SchemaInput
-                  onParse={loadFromSQL}
-                  loading={loading}
-                />
-
-                {error && (
-                  <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-lg p-3 text-xs">
-                    {error}
-                  </div>
-                )}
-
-                {schema && (
-                  <div className="space-y-2">
-                    {hasDatabaseData && (
-                      <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/30 p-1">
-                        <button
-                          type="button"
-                          onClick={() => setActiveView('erd')}
-                          className={`flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors ${
-                            activeView === 'erd'
-                              ? 'bg-card text-foreground shadow-sm'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          <GitFork size={13} />
-                          ERD
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDataTableName(null);
-                            setActiveView('internals');
-                          }}
-                          className={`flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors ${
-                            activeView === 'internals'
-                              ? 'bg-card text-foreground shadow-sm'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          <ScanSearch size={13} />
-                          Internals
-                        </button>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {schema.tables.length} tables ·{' '}
-                        {schema.relationships.length} relationships
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClear}
-                        className="h-7 px-2 text-xs"
-                      >
-                        <RotateCcw
-                          size={12}
-                          className="mr-1"
-                        />
-                        Clear
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setPanelOpen(true)}
-              className="mt-3 rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label="Expand upload panel"
-              title="Expand upload panel"
-            >
-              <PanelLeft size={16} />
-            </button>
-          )}
-        </div>
+        <AppSidebar
+          activeSourceId={activeSourceId}
+          error={error}
+          loading={loading}
+          panelOpen={panelOpen}
+          sources={sources}
+          sourceViews={sourceViews}
+          onClear={handleClear}
+          onCollapsePanel={() => setPanelOpen(false)}
+          onExpandPanel={() => setPanelOpen(true)}
+          onFile={loadFromFile}
+          onParseSQL={loadFromSQL}
+          onSourceDelete={handleSourceDelete}
+          onSourceSelect={selectSource}
+          onSourceViewChange={handleSourceViewChange}
+        />
       )}
 
-      {/* Main Canvas */}
       <div className="flex-1 relative">
         <button
           type="button"
@@ -226,6 +141,7 @@ export const App = ({
               />
             ) : (
               <ERDCanvas
+                key={activeSourceId ?? 'schema'}
                 schema={schema}
                 onTableClick={hasDatabaseData ? handleTableClick : undefined}
               />
