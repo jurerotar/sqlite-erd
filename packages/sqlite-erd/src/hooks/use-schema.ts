@@ -6,6 +6,12 @@ import {
 } from '@/lib/db-parser';
 import { detectInferredRelationships } from '@/lib/relationship-detector';
 import type { Relationship, Schema, Table } from '@/lib/schema-types';
+import {
+  clearPersistedSourceState,
+  loadPersistedSourceState,
+  removePersistedSource,
+  savePersistedSourceState,
+} from '@/lib/source-persistence';
 import { parseSQLStatements } from '@/lib/sql-parser';
 import {
   parseSQLiteFileInternals,
@@ -24,6 +30,11 @@ export type SchemaSource = {
   databaseBuffer: ArrayBuffer | null;
   databaseInternals: SQLiteFileInternals | null;
   sourceKey?: string;
+};
+
+type SchemaSourceState = {
+  sources: SchemaSource[];
+  activeSourceId: string | null;
 };
 
 const databaseExtensions = ['db', 'sqlite', 'sqlite3', 's3db', 'sl3'];
@@ -56,15 +67,21 @@ const getUrlSourceName = (databaseUrl: string) => {
 };
 
 export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
-  const [sources, setSources] = useState<SchemaSource[]>([]);
-  const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
+  const [sourceState, setSourceState] = useState<SchemaSourceState>({
+    sources: [],
+    activeSourceId: null,
+  });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [persistenceReady, setPersistenceReady] = useState(false);
   const sourceSequence = useRef(1);
 
   const activeSource = useMemo(
-    () => sources.find((source) => source.id === activeSourceId) ?? null,
-    [sources, activeSourceId],
+    () =>
+      sourceState.sources.find(
+        (source) => source.id === sourceState.activeSourceId,
+      ) ?? null,
+    [sourceState],
   );
 
   const createPastedSqlName = useCallback(() => {
@@ -73,6 +90,62 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
 
     return name;
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreSources = async () => {
+      try {
+        const restoredState = await loadPersistedSourceState();
+
+        if (cancelled || !restoredState) {
+          return;
+        }
+
+        setSourceState({
+          activeSourceId: restoredState.activeSourceId,
+          sources: restoredState.sources.map((source) => ({
+            ...source,
+            databaseInternals: source.databaseBuffer
+              ? parseSQLiteFileInternals(source.databaseBuffer)
+              : null,
+          })),
+        });
+      } catch (e) {
+        if (!cancelled) {
+          setError(
+            e instanceof Error
+              ? `Failed to restore persisted databases: ${e.message}`
+              : 'Failed to restore persisted databases',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setPersistenceReady(true);
+        }
+      }
+    };
+
+    void restoreSources();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!persistenceReady) {
+      return;
+    }
+
+    void savePersistedSourceState(sourceState).catch((e) => {
+      setError(
+        e instanceof Error
+          ? `Failed to persist databases: ${e.message}`
+          : 'Failed to persist databases',
+      );
+    });
+  }, [persistenceReady, sourceState]);
 
   const addParsedSource = useCallback(
     (
@@ -118,18 +191,24 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
         sourceKey,
       };
 
-      setSources((current) => {
+      setSourceState((current) => {
         if (sourceKey) {
-          const existing = current.find((item) => item.sourceKey === sourceKey);
+          const existing = current.sources.find(
+            (item) => item.sourceKey === sourceKey,
+          );
 
           if (existing) {
-            setActiveSourceId(existing.id);
-            return current;
+            return {
+              ...current,
+              activeSourceId: existing.id,
+            };
           }
         }
 
-        setActiveSourceId(source.id);
-        return [...current, source];
+        return {
+          sources: [...current.sources, source],
+          activeSourceId: source.id,
+        };
       });
 
       return true;
@@ -159,6 +238,10 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
   );
 
   useEffect(() => {
+    if (!persistenceReady) {
+      return undefined;
+    }
+
     if (databaseUrl) {
       const abortController = new AbortController();
 
@@ -171,7 +254,8 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
             signal: abortController.signal,
           });
           if (!response.ok) {
-            throw new Error(`Failed to load database: ${response.status}`);
+            setError(`Failed to load database: ${response.status}`);
+            return;
           }
 
           const uploadedDatabaseBuffer = await response.arrayBuffer();
@@ -198,7 +282,7 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
         }
       };
 
-      loadInitialDatabase();
+      void loadInitialDatabase();
 
       return () => abortController.abort();
     }
@@ -229,7 +313,7 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
     }
 
     return undefined;
-  }, [databaseUrl, sqlSchema, addParsedSource]);
+  }, [databaseUrl, sqlSchema, addParsedSource, persistenceReady]);
 
   const loadFromFile = useCallback(
     async (file: File) => {
@@ -276,13 +360,57 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
   );
 
   const clear = useCallback(() => {
-    setSources([]);
-    setActiveSourceId(null);
+    for (const source of sourceState.sources) {
+      void removePersistedSource(source.id);
+    }
+    void clearPersistedSourceState();
+
+    setSourceState({
+      sources: [],
+      activeSourceId: null,
+    });
+    setError(null);
+  }, [sourceState.sources]);
+
+  const removeSource = useCallback((sourceId: string) => {
+    void removePersistedSource(sourceId);
+
+    setSourceState((current) => {
+      const sourceIndex = current.sources.findIndex(
+        (source) => source.id === sourceId,
+      );
+
+      if (sourceIndex === -1) {
+        return current;
+      }
+
+      const sources = current.sources.filter(
+        (source) => source.id !== sourceId,
+      );
+      const activeSourceId =
+        current.activeSourceId === sourceId
+          ? (sources[sourceIndex]?.id ?? sources[sourceIndex - 1]?.id ?? null)
+          : current.activeSourceId;
+
+      return {
+        sources,
+        activeSourceId,
+      };
+    });
     setError(null);
   }, []);
 
   const selectSource = useCallback((sourceId: string) => {
-    setActiveSourceId(sourceId);
+    setSourceState((current) => {
+      if (current.activeSourceId === sourceId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        activeSourceId: sourceId,
+      };
+    });
     setError(null);
   }, []);
 
@@ -309,8 +437,8 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
   );
 
   return {
-    sources,
-    activeSourceId,
+    sources: sourceState.sources,
+    activeSourceId: sourceState.activeSourceId,
     activeSource,
     schema: activeSource?.schema ?? null,
     loading,
@@ -322,6 +450,7 @@ export const useSchema = ({ databaseUrl, sqlSchema }: InitialSchemaSource) => {
     loadFromSQL,
     loadFromFile,
     selectSource,
+    removeSource,
     clear,
   };
 };

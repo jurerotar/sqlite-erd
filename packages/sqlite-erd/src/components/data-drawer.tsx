@@ -30,6 +30,7 @@ interface DataDrawerProps {
 }
 
 const PAGE_SIZE = 100;
+const OUTSIDE_CLICK_DRAG_THRESHOLD = 6;
 
 const formatCellValue = (value: unknown) => {
   if (value === null || value === undefined) {
@@ -59,6 +60,11 @@ export const DataDrawer = ({
   loadTableData,
 }: DataDrawerProps) => {
   const drawerRef = useRef<HTMLElement>(null);
+  const outsidePointerRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState('1');
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>(
@@ -149,19 +155,62 @@ export const DataDrawer = ({
     const handlePointerDown = (event: PointerEvent) => {
       const drawer = drawerRef.current;
 
+      outsidePointerRef.current = null;
+
+      if (
+        !drawer ||
+        !(event.target instanceof Node) ||
+        drawer.contains(event.target) ||
+        event.button !== 0 ||
+        !event.isPrimary
+      ) {
+        return;
+      }
+
+      outsidePointerRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const outsidePointer = outsidePointerRef.current;
+      outsidePointerRef.current = null;
+
+      if (!outsidePointer || outsidePointer.pointerId !== event.pointerId) {
+        return;
+      }
+
+      const drawer = drawerRef.current;
+      const dragDistance = Math.hypot(
+        event.clientX - outsidePointer.startX,
+        event.clientY - outsidePointer.startY,
+      );
+
       if (
         drawer &&
         event.target instanceof Node &&
-        !drawer.contains(event.target)
+        !drawer.contains(event.target) &&
+        dragDistance <= OUTSIDE_CLICK_DRAG_THRESHOLD
       ) {
         onClose();
       }
     };
 
+    const handlePointerCancel = () => {
+      outsidePointerRef.current = null;
+    };
+
     document.addEventListener('pointerdown', handlePointerDown, true);
+    document.addEventListener('pointerup', handlePointerUp, true);
+    document.addEventListener('pointercancel', handlePointerCancel, true);
 
     return () => {
+      outsidePointerRef.current = null;
       document.removeEventListener('pointerdown', handlePointerDown, true);
+      document.removeEventListener('pointerup', handlePointerUp, true);
+      document.removeEventListener('pointercancel', handlePointerCancel, true);
     };
   }, [onClose, selectedTable]);
 
